@@ -1,0 +1,74 @@
+#!/bin/sh
+# Author: wangshuaig
+# desc: 简单的一个scp扩展脚本，用于快速的传输文件到多台主机，类似于同步，即一个简单的同步实现，可以配合 crontab 使用。
+
+_host_prefix="10.6.60."
+_exec="scp -rpC"
+
+_from=
+_to=
+_hosts=
+_user=root
+
+function setfrom() {
+  if [[ -z ${1%%/*} ]];
+  then
+    _from=$1
+  else
+    _from="`pwd`/$1"
+  fi
+}
+
+function setto() {
+   _to=$1
+}
+
+for i in $@; 
+do
+  _key=${i%%=*}
+  _val=${i#*=}
+  case $_key in
+    -f)
+	setfrom $_val
+    ;;
+    -t)
+	setto $_val
+    ;;
+    -u)
+	_user=$_val
+    ;;
+    -p)
+	_host_prefix="$_val"
+    ;;
+    ?)
+	echo "use $0 {-f=/from/path [-t=/to/path] [-u=username] [-p=host prefix]}"
+        exit 1;
+    ;;
+    *)
+	_hosts="$_hosts $i"
+    ;;
+  esac
+  
+done
+
+if [[ -z "$_from" ]];
+then
+  echo "[WRAN] must set from path！"
+  exit 1
+fi
+
+if [[ -z "$_to" ]];
+then
+    _to=$_from
+fi
+
+
+for h in $_hosts;
+do
+  _ip=$_host_prefix$h
+  echo [INFO] start scp from $_from to $_user@$_host_prefix$h:$_to
+  `$_exec $_from $_user@$_ip:$_to`
+  echo [INFO] scp to $_ip done!
+done
+echo [INFO] all done!
+
